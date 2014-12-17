@@ -45,7 +45,7 @@ function sleep_until(target,   diff,use_msec) {
 }
 
 # Compute the immediate next timestamp when given an interval and an offset
-function compute_next(expr, tstamp, first_time,    pos, period, offset, tnext) {
+function compute_next(expr, tstamp, first_time,    pos, period, offset, offset_mod, unit, tnext) {
 	period = expr; offset = ""
 	if (pos = index(expr, ":")) {
 		period = substr(expr, 1,  pos - 1)
@@ -53,10 +53,19 @@ function compute_next(expr, tstamp, first_time,    pos, period, offset, tnext) {
 	}
 	if (first_time) {
 		tnext = round_timestamp(period, tstamp)
-		if (offset)
+		if (offset) {
+			# Calculate the module of the offset with the period (if the offset is smaller than the period, then that will equal the offset)
 			tnext = compute_relative("+" offset, tnext)
+			offset_mod = tnext - round_timestamp(period, tnext)
+			# Now calculate it with the right offset (offset_mod)
+			if (offset_mod)
+				tnext = compute_relative("+" offset_mod "s", round_timestamp(period, tstamp))
+		}
 	} else {
-		tnext = compute_relative("+" period, tstamp)
+		# this time we have to only round by the unit (i.e the start of a second, minute etc.)
+		unit = period; sub(/^[+-]?[0-9]*[.]?[0-9]*/, "", unit)
+		tnext = round_timestamp(unit, tstamp)
+		tnext = compute_relative("+" period, tnext)
 	}
 	if ((tnext + 0) <= (tstamp + 1))   # make sure a string timestamp like "1491234567.000" is converted to numeric or else bad things happen
 		tnext = compute_relative("+" period, tnext)
