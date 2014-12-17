@@ -1,4 +1,6 @@
 
+
+
 # system sleep command
 function _sleep_sys(seconds) { if (system(sprintf("trap \"exit 1\" 2; sleep %.3f", seconds)) != 0) exit 1 }
 
@@ -43,15 +45,19 @@ function sleep_until(target,   diff,use_msec) {
 }
 
 # Compute the immediate next timestamp when given an interval and an offset
-function compute_next(expr, tstamp,    pos, period, offset, tnext) {
+function compute_next(expr, tstamp, first_time,    pos, period, offset, tnext) {
 	period = expr; offset = ""
 	if (pos = index(expr, ":")) {
 		period = substr(expr, 1,  pos - 1)
 		offset = substr(expr, pos + 1)
 	}
-	tnext = round_timestamp(period, tstamp)
-	if (offset)
-		tnext = compute_relative("+" offset, tnext)
+	if (first_time) {
+		tnext = round_timestamp(period, tstamp)
+		if (offset)
+			tnext = compute_relative("+" offset, tnext)
+	} else {
+		tnext = compute_relative("+" period, tstamp)
+	}
 	if ((tnext + 0) <= (tstamp + 1))   # make sure a string timestamp like "1491234567.000" is converted to numeric or else bad things happen
 		tnext = compute_relative("+" period, tnext)
 	return tnext
@@ -70,7 +76,7 @@ function minicron(Tasks, TasksInfo, method, handler,
 	# Start: Find the next time instance for all definitions and add them to the queue
 	for (task_id = 1; task_id <= length(Tasks); task_id++) { 
 		expr = Tasks[task_id]
-		tnext = compute_next(expr, now)
+		tnext = compute_next(expr, now, "first_time")
 		PrioInsert(TasksQueue, tnext, task_id) 
 	}
 	
@@ -132,7 +138,7 @@ function minicron(Tasks, TasksInfo, method, handler,
 # The same Scheduler as before, only this case cheating the clock
 # This function nevers call the real clock, it only pretends that it did by sleeping just some seconds
 # and assuming that the time is equal to that of the first scheduled task
-function cheatycron(Tasks, TasksInfo, method, handler, time_start,  
+function cheatycron(Tasks, TasksInfo, method, handler, time_start, sleep_cheat,    
 				TasksQueue, TasksNext, Data, now, now_scheduled, tnext, got_rest, cnt_unrest,
 				task_id, i, n, expr, now_cnt) {
 	split("", TasksNext)
@@ -181,7 +187,6 @@ function cheatycron(Tasks, TasksInfo, method, handler, time_start,
 			expr = Tasks[task_id]
 			tnext = compute_next(expr, now)
 			PrioInsert(TasksQueue, tnext, task_id)
-			message("Running task " task_id " at: " now " - next is: " tnext)
 			if (method == "callback") {
 				# @handler(task_id, now_scheduled, TasksInfo)  # commented-out for gawk3 support
 				task_handler(task_id, now_scheduled, TasksInfo)
@@ -195,7 +200,8 @@ function cheatycron(Tasks, TasksInfo, method, handler, time_start,
 		split("", Data)
 		
 		# Get some sleep
-		_sleep_sys(4)
+		if (! (sleep_cheat+0)) sleep_cheat = 4
+		_sleep_sys(sleep_cheat)
 	}
 }
 
