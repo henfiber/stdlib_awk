@@ -55,7 +55,7 @@ function compute_next(expr, tstamp, first_time,    pos, period, offset, offset_m
 	if (offset) {
 		# Calculate the module of the offset with the period (if the offset is smaller than the period, then that will equal the offset)
 		tnext = compute_relative("+" offset, tnext)
-		offset_mod = tnext - round_timestamp(period, tnext)
+		offset_mod = sprintf("%d", tnext - round_timestamp(period, tnext)) + 0
 		# Now calculate it with the right offset (offset_mod)
 		if (offset_mod && offset_mod > 0)
 			tnext = compute_relative("+" offset_mod "s", round_timestamp(period, tstamp))
