@@ -1,5 +1,5 @@
 
-
+# see http://howardhinnant.github.io/date_algorithms.html
 
 # system sleep command
 function _sleep_sys(seconds) { if (system(sprintf("trap \"exit 1\" 2; sleep %.3f", seconds)) != 0) exit 1 }
